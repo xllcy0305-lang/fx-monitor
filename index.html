@@ -451,23 +451,30 @@ function renderCards() {
     const d = allData[c.code];
     const sig = getSig(c.code);
     const mid = d.current;
-    const bankSpread = mid * 0.0035;
-    const buyR = mid - bankSpread/2;
-    const sellR = mid + bankSpread/2;
     const pos = getPos(c.code);
+
+    // 计算三家银行卖出价（你从银行买外汇要付的钱）
+    const abcRate = mid * (1 + BANK_SPREADS.ABC.spread/2 + BANK_SPREADS.ABC.adj);
+    const icbcRate = mid * (1 + BANK_SPREADS.ICBC.spread/2 + BANK_SPREADS.ICBC.adj);
+    const ccbRate = mid * (1 + BANK_SPREADS.CCB.spread/2 + BANK_SPREADS.CCB.adj);
+    let bankCheapest = 'CCB';
+    let minBankRate = ccbRate;
+    if (abcRate < minBankRate) { bankCheapest = 'ABC'; minBankRate = abcRate; }
+    if (icbcRate < minBankRate) { bankCheapest = 'ICBC'; minBankRate = icbcRate; }
+
     return `<div class="card" onclick="openDetail('${c.code}')">
       <div class="top">
         <span class="pair">${c.flag} ${c.name} (${c.code})</span>
         <span class="signal-badge ${sig.cls}">${sig.text}</span>
       </div>
       <div class="rates-row">
-        <div class="rate-cell"><div class="lbl">买入价</div><div class="val buy-c">${fmt(buyR)}</div></div>
-        <div class="rate-cell"><div class="lbl">中间价</div><div class="val mid-c">${fmt(mid)}</div></div>
-        <div class="rate-cell"><div class="lbl">卖出价</div><div class="val sell-c">${fmt(sellR)}</div></div>
+        <div class="rate-cell"><div class="lbl">农行实付</div><div class="val ${bankCheapest==='ABC'?'g':'buy-c'}">${fmt(abcRate)}</div></div>
+        <div class="rate-cell"><div class="lbl">工行实付</div><div class="val ${bankCheapest==='ICBC'?'g':'buy-c'}">${fmt(icbcRate)}</div></div>
+        <div class="rate-cell"><div class="lbl">建行实付</div><div class="val ${bankCheapest==='CCB'?'g':'buy-c'}">${fmt(ccbRate)}</div></div>
       </div>
       <div class="bottom">
         <span>波动: ${c.vol}</span>
-        <span>位置: ${pos.toFixed(0)}%</span>
+        <span>最低实付: ${bankCheapest==='ABC'?'农行':bankCheapest==='ICBC'?'工行':'建行'} ${fmt(minBankRate)}</span>
       </div>
     </div>`;
   }).join('');
@@ -502,47 +509,51 @@ function openDetail(code) {
   const pos = getPos(code);
   const sig = getSig(code);
 
+  // 计算三家银行卖出价（你实际要付的钱）
+  const abcRate = d.current * (1 + BANK_SPREADS.ABC.spread/2 + BANK_SPREADS.ABC.adj);
+  const icbcRate = d.current * (1 + BANK_SPREADS.ICBC.spread/2 + BANK_SPREADS.ICBC.adj);
+  const ccbRate = d.current * (1 + BANK_SPREADS.CCB.spread/2 + BANK_SPREADS.CCB.adj);
+  let cheapest = '建行', cheapestCode = 'CCB', minBankRate = ccbRate;
+  if (abcRate < minBankRate) { cheapest = '农行'; cheapestCode = 'ABC'; minBankRate = abcRate; }
+  if (icbcRate < minBankRate) { cheapest = '工行'; cheapestCode = 'ICBC'; minBankRate = icbcRate; }
+
   const vbox = document.getElementById('detailVerdict');
   vbox.className = 'detail-verdict ' + sig.cls;
   if (sig.cls === 'buy') {
-    vbox.innerHTML = `<span style="font-size:36px">🟢</span><br>现在买入${c.name}！`;
+    vbox.innerHTML = `<span style="font-size:36px">🟢</span><br>去${cheapest}买${c.name}！<br><span style="font-size:14px">实付 ${fmt(minBankRate)} 元/个</span>`;
   } else if (sig.cls === 'sell') {
-    vbox.innerHTML = `<span style="font-size:36px">🔴</span><br>现在不要买${c.name}！`;
+    vbox.innerHTML = `<span style="font-size:36px">🔴</span><br>现在不要买${c.name}！<br><span style="font-size:14px">最便宜也要 ${fmt(minBankRate)} 元/个</span>`;
   } else {
-    vbox.innerHTML = `<span style="font-size:36px">🟡</span><br>${c.name}价格一般`;
+    vbox.innerHTML = `<span style="font-size:36px">🟡</span><br>${c.name}价格一般<br><span style="font-size:14px">最便宜 ${cheapest} ${fmt(minBankRate)} 元/个</span>`;
   }
 
+  // 用最便宜银行的价格来计算
   let explain = '';
   if (sig.cls === 'buy') {
-    explain = `${c.name}汇率 ${fmt(d.current)} 接近近期最低 ${fmt(d.low)}，处于底部 ${pos.toFixed(0)}%。\n现在用人民币买入${c.name}，等涨上去再换回人民币赚钱。`;
+    explain = `去【${cheapest}】买入${c.name}，实付 ${fmt(minBankRate)} 元/个（中间价 ${fmt(d.current)}）\n近期位置 ${pos.toFixed(0)}%（越低越便宜），接近近期底部。\n操作：打开${cheapest}App → 结售汇 → 选${c.name} → 购汇`;
   } else if (sig.cls === 'sell') {
-    explain = `${c.name}汇率 ${fmt(d.current)} 接近近期最高 ${fmt(d.high)}，处于顶部 ${pos.toFixed(0)}%。\n现在买太贵了，等汇率降下来再说。如果之前买了，现在是卖出好时机。`;
+    explain = `现在${c.name}太贵，${cheapest}实付 ${fmt(minBankRate)} 元/个，处于近期顶部 ${pos.toFixed(0)}%。\n建议等汇率降下来再买。如果之前买了，现在可以结汇卖出。`;
   } else {
-    explain = `${c.name}汇率 ${fmt(d.current)} 处于中间位置 ${pos.toFixed(0)}%。\n近期在 ${fmt(d.low)} ~ ${fmt(d.high)} 之间波动，建议继续观望。`;
+    explain = `${cheapest}实付 ${fmt(minBankRate)} 元/个，处于近期中间位置 ${pos.toFixed(0)}%。\n近期波动：${fmt(d.low)} ~ ${fmt(d.high)}，建议继续观望等更好的价格。`;
   }
   document.getElementById('detailExplain').textContent = explain;
 
-  const canBuy = cap / d.current;
+  // 用银行实付价计算买入收益
+  const canBuy = cap / minBankRate;  // 用银行价算能买多少
   const tp = parseFloat(document.getElementById('targetProfit').value) || 50;
   const sl = parseFloat(document.getElementById('stopLoss').value) || 500;
-  const targetRate = cap / (canBuy - tp / d.current);
-  const stopRate = cap / (canBuy + sl / d.current);
+  // 卖出时银行买入价（你卖给银行的价格）= 中间价 * (1 - spread/2)
+  const bankBuyBack = d.current * (1 - 0.0032/2); // 卖回给银行的价格（更低）
+  const targetSellRate = minBankRate + (tp / canBuy); // 赚目标金额需要的卖出价
+  const stopSellRate = minBankRate - (sl / canBuy);   // 亏止损金额的价格
   document.getElementById('detailProfit').innerHTML = `
     <div class="r-line"><span class="l">本金</span><span class="v">${cap} 元</span></div>
-    <div class="r-line"><span class="l">现在能买</span><span class="v">${fmt(canBuy)} ${c.name}</span></div>
-    <div class="r-line"><span class="l">赚${tp}元需涨到</span><span class="v g">${fmt(targetRate)} ¥</span></div>
-    <div class="r-line"><span class="l">亏${sl}元会跌到</span><span class="v r">${fmt(stopRate)} ¥</span></div>
+    <div class="r-line"><span class="l">去${cheapest}实付价</span><span class="v r">${fmt(minBankRate)} 元/个</span></div>
+    <div class="r-line"><span class="l">能买</span><span class="v">${fmt(canBuy)} ${c.name}</span></div>
+    <div class="r-line"><span class="l">当前卖出可得</span><span class="v">${fmt(canBuy * bankBuyBack)} 元（卖回价 ${fmt(bankBuyBack)}）</span></div>
+    <div class="r-line"><span class="l">赚${tp}元需涨到</span><span class="v g">${fmt(targetSellRate)} 元/个</span></div>
+    <div class="r-line"><span class="l">亏${sl}元会跌到</span><span class="v r">${fmt(stopSellRate)} 元/个</span></div>
   `;
-
-  // 哪家银行最便宜
-  let bankInfo = '';
-  let cheapest = '', minR = Infinity;
-  for (const [bk, info] of Object.entries(BANK_SPREADS)) {
-    const sr = d.current * (1 + info.spread/2 + info.adj);
-    if (sr < minR) { minR = sr; cheapest = info.name; }
-  }
-  bankInfo = `\n去 ${cheapest} 买最便宜，汇率约 ${fmt(minR)}`;
-  document.getElementById('detailExplain').textContent += bankInfo;
 
   drawDetailChart(d);
 }
@@ -592,9 +603,24 @@ function checkAlerts() {
     }
   }
   if (buyCoins.length > 0) {
+    // 通知内容包含银行实付价
+    const details = buyCoins.map(c => {
+      const d = allData[c.code];
+      const minBank = Math.min(
+        d.current * (1 + BANK_SPREADS.ABC.spread/2 + BANK_SPREADS.ABC.adj),
+        d.current * (1 + BANK_SPREADS.ICBC.spread/2 + BANK_SPREADS.ICBC.adj),
+        d.current * (1 + BANK_SPREADS.CCB.spread/2 + BANK_SPREADS.CCB.adj)
+      );
+      const banks = [];
+      if (minBank === d.current * (1 + BANK_SPREADS.ABC.spread/2 + BANK_SPREADS.ABC.adj)) banks.push('农行');
+      if (minBank === d.current * (1 + BANK_SPREADS.ICBC.spread/2 + BANK_SPREADS.ICBC.adj)) banks.push('工行');
+      if (minBank === d.current * (1 + BANK_SPREADS.CCB.spread/2 + BANK_SPREADS.CCB.adj)) banks.push('建行');
+      const fmt = v => v < 0.01 ? v.toFixed(6) : v.toFixed(4);
+      return c.flag + c.name + ' 去' + banks.join('/') + '买 ' + fmt(minBank) + '元';
+    });
     const names = buyCoins.map(c => c.flag + c.name).join('、');
-    sendNotif('🟢 买入机会！', names + ' 汇率处于低位，建议买入');
-    showToast('🟢 发现买入机会！', names);
+    sendNotif('🟢 买入机会！', details.join('\n'));
+    showToast('🟢 发现买入机会！', details.join(' | '));
     playAlert();
     // 页面标题闪烁
     document.title = '⚠️ 买入机会！- 全球汇率监控';
