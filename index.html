@@ -1,511 +1,668 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高波动货币买卖提示</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, "Microsoft YaHei", sans-serif;
-            background: #0a0a0a;
-            color: #fff;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        h1 { text-align: center; font-size: 22px; color: #aaa; margin-bottom: 20px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>全球汇率监控 · 银行比价</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;padding:16px}
+h1{text-align:center;font-size:20px;color:#aaa;margin-bottom:6px}
+.sub-title{text-align:center;font-size:12px;color:#555;margin-bottom:16px}
 
-        .tab-bar {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .tab {
-            padding: 10px 20px;
-            border-radius: 10px;
-            background: #1a1a1a;
-            border: 2px solid #333;
-            cursor: pointer;
-            font-size: 15px;
-            text-align: center;
-            transition: all 0.2s;
-            min-width: 120px;
-        }
-        .tab:hover { border-color: #00d4ff; }
-        .tab.active { border-color: #00d4ff; background: #00d4ff22; }
-        .tab .flag { font-size: 24px; }
-        .tab .name { font-size: 13px; color: #aaa; margin-top: 2px; }
-        .tab .signal { font-size: 12px; margin-top: 4px; font-weight: bold; }
+/* 通知授权横幅 */
+.notif-bar{background:#1a3a2a;border:1px solid #00e676;border-radius:10px;padding:12px 16px;margin-bottom:16px;text-align:center;display:none}
+.notif-bar button{background:#00e676;color:#000;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:bold;margin-left:10px}
 
-        .main-panel {
-            max-width: 500px;
-            margin: 0 auto;
-        }
+/* 银行比价 */
+.bank-compare{background:#1a2632;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #2a3a4a}
+.bank-compare h2{font-size:15px;color:#00d4ff;margin-bottom:10px}
+.bank-table{width:100%;border-collapse:collapse;font-size:13px}
+.bank-table th{color:#888;text-align:left;padding:6px 8px;border-bottom:1px solid #2a3a4a;font-weight:normal}
+.bank-table td{padding:6px 8px;border-bottom:1px solid #1a2632}
+.bank-table .cheapest{color:#00e676;font-weight:bold}
+.bank-table .bank-name{display:flex;align-items:center;gap:6px}
 
-        .rate-display {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .rate-display .pair { font-size: 18px; color: #888; margin-bottom: 8px; }
-        .rate-display .rate { font-size: 64px; font-weight: bold; }
-        .rate-display .rate.low { color: #00e676; }
-        .rate-display .rate.high { color: #ff5252; }
-        .rate-display .rate.mid { color: #ffab40; }
-        .rate-display .sub { font-size: 13px; color: #666; margin-top: 6px; }
+/* 筛选栏 */
+.filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.filter-bar select,.filter-bar input{background:#1a1a1a;border:1px solid #333;color:#fff;padding:6px 10px;border-radius:6px;font-size:13px}
+.filter-bar .search-input{width:140px}
+.filter-bar label{color:#888;font-size:12px}
 
-        .verdict {
-            padding: 24px;
-            border-radius: 16px;
-            text-align: center;
-            margin-bottom: 24px;
-            font-size: 22px;
-            font-weight: bold;
-        }
-        .verdict.buy { background: #00e67618; border: 2px solid #00e676; color: #00e676; }
-        .verdict.sell { background: #ff525218; border: 2px solid #ff5252; color: #ff5252; }
-        .verdict.wait { background: #ffab4018; border: 2px solid #ffab40; color: #ffab40; }
-        .verdict .emoji { font-size: 40px; display: block; margin-bottom: 8px; }
+/* 货币卡片网格 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:16px}
+.card{background:#1a1a1a;border-radius:10px;padding:14px;border:1px solid #2a3a4a;transition:border-color .2s;cursor:pointer}
+.card:hover{border-color:#00d4ff}
+.card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.card .pair{font-size:15px;font-weight:bold}
+.card .signal-badge{padding:3px 10px;border-radius:8px;font-size:11px;font-weight:bold}
+.card .signal-badge.buy{background:#00e67622;color:#00e676}
+.card .signal-badge.sell{background:#ff525222;color:#ff5252}
+.card .signal-badge.wait{background:#ffab4022;color:#ffab40}
+.card .rates-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+.card .rate-cell{text-align:center;background:#0a0a0a;border-radius:6px;padding:6px}
+.card .rate-cell .lbl{font-size:10px;color:#666}
+.card .rate-cell .val{font-size:14px;font-weight:bold;margin-top:2px}
+.card .rate-cell .val.buy-c{color:#ff5252}
+.card .rate-cell .val.sell-c{color:#00e676}
+.card .rate-cell .val.mid-c{color:#00d4ff}
+.card .bottom{display:flex;justify-content:space-between;font-size:11px;color:#666}
 
-        .explain {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            line-height: 1.8;
-            color: #ccc;
-        }
+/* 详情面板 */
+.detail-panel{background:#1a2632;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #2a3a4a;display:none}
+.detail-panel.show{display:block}
+.detail-panel h2{font-size:16px;color:#00d4ff;margin-bottom:12px}
+.detail-close{float:right;background:none;border:none;color:#888;font-size:20px;cursor:pointer}
+.detail-close:hover{color:#fff}
+.detail-verdict{padding:16px;border-radius:12px;text-align:center;margin-bottom:14px;font-size:20px;font-weight:bold}
+.detail-verdict.buy{background:#00e67618;border:2px solid #00e676;color:#00e676}
+.detail-verdict.sell{background:#ff525218;border:2px solid #ff5252;color:#ff5252}
+.detail-verdict.wait{background:#ffab4018;border:2px solid #ffab40;color:#ffab40}
+.detail-explain{background:#0a0a0a;border-radius:8px;padding:12px;font-size:13px;line-height:1.8;color:#ccc;margin-bottom:14px}
+.detail-profit{background:#0a0a0a;border-radius:8px;padding:12px;margin-bottom:14px}
+.detail-profit h3{font-size:13px;color:#00d4ff;margin-bottom:8px}
+.detail-chart{background:#0a0a0a;border-radius:8px;padding:12px;margin-bottom:14px}
+.detail-chart h3{font-size:13px;color:#00d4ff;margin-bottom:8px}
+canvas{width:100%;height:120px}
+.r-line{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1a2632;font-size:12px}
+.r-line:last-child{border:none}
+.r-line .l{color:#888}
+.r-line .v{font-weight:bold}
+.g{color:#00e676}
+.r{color:#ff5252}
 
-        .profit-box {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        .profit-box h3 { font-size: 14px; color: #00d4ff; margin-bottom: 10px; }
-        .row-line {
-            display: flex;
-            justify-content: space-between;
-            padding: 7px 0;
-            border-bottom: 1px solid #222;
-            font-size: 13px;
-        }
-        .row-line:last-child { border-bottom: none; }
-        .row-line .lbl { color: #888; }
-        .row-line .val { font-weight: bold; }
-        .green { color: #00e676; }
-        .red { color: #ff5252; }
+/* 持仓记录 */
+.position-box{background:#1a2632;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #2a3a4a}
+.position-box h2{font-size:15px;color:#00d4ff;margin-bottom:10px}
+.pos-form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.pos-form input,.pos-form select{background:#0a0a0a;border:1px solid #333;color:#fff;padding:5px 8px;border-radius:6px;font-size:12px}
+.pos-form button{background:#00d4ff;color:#000;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:12px}
+.pos-table{width:100%;border-collapse:collapse;font-size:12px}
+.pos-table th{color:#888;text-align:left;padding:5px;border-bottom:1px solid #2a3a4a}
+.pos-table td{padding:5px;border-bottom:1px solid #1a2632}
+.pos-table .del-btn{background:none;border:none;color:#ff5252;cursor:pointer;font-size:14px}
 
-        .chart-box {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        .chart-box h3 { font-size: 14px; color: #00d4ff; margin-bottom: 10px; }
-        canvas { width: 100%; height: 120px; }
-        .chart-info { font-size: 11px; color: #666; text-align: center; margin-top: 6px; }
+/* 设置 */
+.settings-box{background:#1a2632;border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid #2a3a4a}
+.settings-box .srow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px}
+.settings-box label{color:#888}
+.settings-box input,.settings-box select{background:#0a0a0a;border:1px solid #333;color:#fff;padding:5px 8px;border-radius:6px;font-size:12px}
+.settings-box button{background:#00d4ff;color:#000;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:13px;width:100%;margin-top:8px}
 
-        .data-box {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        .data-box h3 { font-size: 14px; color: #00d4ff; margin-bottom: 10px; }
+/* 状态栏 */
+.status{text-align:center;font-size:11px;color:#555;margin-top:8px}
+.status .live{color:#00e676}
 
-        .settings-box {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-        .settings-box .srow {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            font-size: 13px;
-        }
-        .settings-box label { color: #888; }
-        .settings-box input, .settings-box select {
-            background: #0a0a0a;
-            border: 1px solid #333;
-            color: #fff;
-            padding: 5px 8px;
-            border-radius: 6px;
-            font-size: 13px;
-        }
-        .settings-box button {
-            background: #00d4ff;
-            color: #000;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 13px;
-            width: 100%;
-            margin-top: 8px;
-        }
+/* 提醒弹窗 */
+.alert-toast{position:fixed;top:20px;right:20px;background:#1a3a2a;border:2px solid #00e676;border-radius:12px;padding:16px 20px;z-index:999;display:none;max-width:320px;animation:slideIn .3s}
+.alert-toast.show{display:block}
+.alert-toast h3{color:#00e676;font-size:14px;margin-bottom:6px}
+.alert-toast p{font-size:13px;color:#ccc}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 
-        .status-bar {
-            text-align: center;
-            font-size: 11px;
-            color: #555;
-            margin-top: 10px;
-        }
-        .status-bar .live { color: #00e676; }
+.loading{text-align:center;padding:40px;color:#888}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid #333;border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-        .loading { text-align: center; padding: 60px; color: #888; }
-        .spinner {
-            display: inline-block;
-            width: 28px;
-            height: 28px;
-            border: 3px solid #333;
-            border-top-color: #00d4ff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 10px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+/* 响应式 */
+@media(max-width:600px){
+.grid{grid-template-columns:1fr}
+.bank-table{font-size:11px}
+}
+</style>
 </head>
 <body>
-    <h1>高波动货币 · 买卖提示</h1>
+<h1>全球汇率监控 · 银行比价</h1>
+<div class="sub-title">实时监控全球货币 · 自动比价农行/工行/建行 · 买入提醒</div>
 
-    <div class="tab-bar" id="tabBar"></div>
+<div class="notif-bar" id="notifBar">
+  开启通知提醒，发现买入机会时自动弹窗+声音提醒
+  <button onclick="enableNotif()">开启通知</button>
+</div>
 
-    <div id="loadingArea">
-        <div class="loading">
-            <div class="spinner"></div>
-            <div>正在获取汇率数据...</div>
-        </div>
-    </div>
+<div class="alert-toast" id="alertToast">
+  <h3 id="toastTitle"></h3>
+  <p id="toastMsg"></p>
+</div>
 
-    <div class="main-panel" id="mainArea" style="display:none">
-        <div class="rate-display">
-            <div class="pair" id="pairName">--</div>
-            <div class="rate" id="currentRate">--</div>
-            <div class="sub" id="rateTime">--</div>
-        </div>
-        <div class="verdict wait" id="verdictBox">
-            <span class="emoji" id="verdictEmoji">⏳</span>
-            <div id="verdictText">加载中...</div>
-        </div>
-        <div class="explain" id="explainBox"></div>
-        <div class="profit-box">
-            <h3>买入计算（本金 <span id="capLabel">3000</span> 元）</h3>
-            <div id="profitRows"></div>
-        </div>
-        <div class="chart-box">
-            <h3>汇率走势</h3>
-            <canvas id="chartCanvas"></canvas>
-            <div class="chart-info" id="chartInfo"></div>
-        </div>
-        <div class="data-box">
-            <h3>关键数据</h3>
-            <div id="keyData"></div>
-        </div>
-        <div class="settings-box">
-            <div class="srow">
-                <label>本金(元)</label>
-                <input type="number" id="capital" value="3000" min="100" style="width:80px">
-            </div>
-            <div class="srow">
-                <label>目标赚(元)</label>
-                <input type="number" id="targetProfit" value="50" min="10" style="width:80px">
-            </div>
-            <div class="srow">
-                <label>止损亏(元)</label>
-                <input type="number" id="stopLoss" value="500" min="50" style="width:80px">
-            </div>
-            <div class="srow">
-                <label>刷新间隔</label>
-                <select id="refreshSec">
-                    <option value="15">15秒</option>
-                    <option value="30" selected>30秒</option>
-                    <option value="60">1分钟</option>
-                </select>
-            </div>
-            <button onclick="applySettings()">应用设置</button>
-        </div>
-    </div>
+<!-- 银行比价总结 -->
+<div class="bank-compare" id="bankSection">
+  <h2>银行买入价对比 · 哪家最便宜</h2>
+  <table class="bank-table">
+    <thead>
+      <tr><th>货币</th><th>农行</th><th>工行</th><th>建行</th><th>最便宜</th></tr>
+    </thead>
+    <tbody id="bankBody"></tbody>
+  </table>
+</div>
 
-    <div class="status-bar">
-        状态: <span class="live" id="statusText">加载中...</span> ·
-        下次刷新: <span id="countdown">--</span>秒
-    </div>
+<!-- 筛选 -->
+<div class="filter-bar">
+  <select id="filterGroup" onchange="renderCards()">
+    <option value="all">全部货币</option>
+    <option value="major">主要货币</option>
+    <option value="asia">亚洲货币</option>
+    <option value="europe">欧洲货币</option>
+    <option value="americas">美洲货币</option>
+    <option value="buy">有买入信号</option>
+  </select>
+  <input type="text" class="search-input" id="searchBox" placeholder="搜索货币名称..." oninput="renderCards()">
+  <label><input type="checkbox" id="soundOn" checked> 声音</label>
+  <label><input type="checkbox" id="notifOn"> 通知</label>
+</div>
+
+<!-- 详情面板 -->
+<div class="detail-panel" id="detailPanel">
+  <button class="detail-close" onclick="closeDetail()">&times;</button>
+  <h2 id="detailTitle"></h2>
+  <div class="detail-verdict" id="detailVerdict"></div>
+  <div class="detail-explain" id="detailExplain"></div>
+  <div class="detail-profit">
+    <h3>买入计算（本金 <span id="dCap">3000</span> 元）</h3>
+    <div id="detailProfit"></div>
+  </div>
+  <div class="detail-chart">
+    <h3>走势</h3>
+    <canvas id="detailCanvas"></canvas>
+    <div style="font-size:11px;color:#666;text-align:center;margin-top:4px" id="chartInfo"></div>
+  </div>
+</div>
+
+<!-- 货币卡片 -->
+<div id="loadingArea"><div class="loading"><div class="spinner"></div><div>正在获取全球汇率...</div></div></div>
+<div class="grid" id="cardGrid" style="display:none"></div>
+
+<!-- 持仓记录 -->
+<div class="position-box">
+  <h2>我的持仓</h2>
+  <div class="pos-form">
+    <select id="posCoin"><option value="">选货币</option></select>
+    <input type="number" id="posAmount" placeholder="买入金额(元)" style="width:100px">
+    <input type="number" id="posRate" placeholder="买入汇率" style="width:90px" step="0.0001">
+    <button onclick="addPosition()">记录买入</button>
+  </div>
+  <table class="pos-table">
+    <thead><tr><th>货币</th><th>买入金额</th><th>买入汇率</th><th>当前汇率</th><th>盈亏</th><th></th></tr></thead>
+    <tbody id="posBody"></tbody>
+  </table>
+</div>
+
+<!-- 设置 -->
+<div class="settings-box">
+  <div class="srow"><label>本金(元)</label><input type="number" id="capital" value="3000" min="100" style="width:80px"></div>
+  <div class="srow"><label>目标赚(元)</label><input type="number" id="targetProfit" value="50" min="10" style="width:80px"></div>
+  <div class="srow"><label>止损亏(元)</label><input type="number" id="stopLoss" value="500" min="50" style="width:80px"></div>
+  <div class="srow"><label>买入阈值(%)</label><input type="number" id="buyThreshold" value="15" min="5" max="40" style="width:80px"></div>
+  <div class="srow"><label>刷新间隔</label><select id="refreshSec"><option value="15">15秒</option><option value="30" selected>30秒</option><option value="60">1分钟</option><option value="120">2分钟</option></select></div>
+  <button onclick="applySettings()">应用设置</button>
+</div>
+
+<div class="status">状态: <span class="live" id="statusText">加载中...</span> · 下次刷新: <span id="countdown">--</span>秒</div>
 
 <script>
-// 高波动货币配置
-const COINS = [
-    { code: 'JPY', name: '日元', flag: '🇯🇵', note: '波动最大' },
-    { code: 'GBP', name: '英镑', flag: '🇬🇧', note: '波动大' },
-    { code: 'KRW', name: '韩元', flag: '🇰🇷', note: '波动较大' },
-    { code: 'AUD', name: '澳元', flag: '🇦🇺', note: '波动中等' },
-    { code: 'EUR', name: '欧元', flag: '🇪🇺', note: '波动中等' },
+// ===== 全球货币配置 =====
+const ALL_COINS = [
+  // 亚洲
+  {code:'JPY',name:'日元',flag:'🇯🇵',grp:'asia',vol:'高'},
+  {code:'KRW',name:'韩元',flag:'🇰🇷',grp:'asia',vol:'高'},
+  {code:'HKD',name:'港币',flag:'🇭🇰',grp:'asia',vol:'低'},
+  {code:'TWD',name:'新台币',flag:'🇹🇼',grp:'asia',vol:'中'},
+  {code:'SGD',name:'新加坡元',flag:'🇸🇬',grp:'asia',vol:'中'},
+  {code:'THB',name:'泰铢',flag:'🇹🇭',grp:'asia',vol:'中'},
+  {code:'MYR',name:'马来西亚林吉特',flag:'🇲🇾',grp:'asia',vol:'中'},
+  {code:'PHP',name:'菲律宾比索',flag:'🇵🇭',grp:'asia',vol:'中'},
+  {code:'IDR',name:'印尼盾',flag:'🇮🇩',grp:'asia',vol:'中'},
+  {code:'VND',name:'越南盾',flag:'🇻🇳',grp:'asia',vol:'低'},
+  {code:'INR',name:'印度卢比',flag:'🇮🇳',grp:'asia',vol:'中'},
+  {code:'PKR',name:'巴基斯坦卢比',flag:'🇵🇰',grp:'asia',vol:'低'},
+  {code:'BDT',name:'孟加拉塔卡',flag:'🇧🇩',grp:'asia',vol:'低'},
+  // 欧洲
+  {code:'EUR',name:'欧元',flag:'🇪🇺',grp:'europe',vol:'中'},
+  {code:'GBP',name:'英镑',flag:'🇬🇧',grp:'europe',vol:'高'},
+  {code:'CHF',name:'瑞士法郎',flag:'🇨🇭',grp:'europe',vol:'中'},
+  {code:'SEK',name:'瑞典克朗',flag:'🇸🇪',grp:'europe',vol:'中'},
+  {code:'NOK',name:'挪威克朗',flag:'🇳🇴',grp:'europe',vol:'中'},
+  {code:'DKK',name:'丹麦克朗',flag:'🇩🇰',grp:'europe',vol:'低'},
+  {code:'PLN',name:'波兰兹罗提',flag:'🇵🇱',grp:'europe',vol:'中'},
+  {code:'CZK',name:'捷克克朗',flag:'🇨🇿',grp:'europe',vol:'中'},
+  {code:'HUF',name:'匈牙利福林',flag:'🇭🇺',grp:'europe',vol:'中'},
+  {code:'TRY',name:'土耳其里拉',flag:'🇹🇷',grp:'europe',vol:'极高'},
+  {code:'RUB',name:'俄罗斯卢布',flag:'🇷🇺',grp:'europe',vol:'极高'},
+  // 美洲
+  {code:'USD',name:'美元',flag:'🇺🇸',grp:'americas',vol:'低'},
+  {code:'CAD',name:'加元',flag:'🇨🇦',grp:'americas',vol:'中'},
+  {code:'BRL',name:'巴西雷亚尔',flag:'🇧🇷',grp:'americas',vol:'高'},
+  {code:'MXN',name:'墨西哥比索',flag:'🇲🇽',grp:'americas',vol:'中'},
+  {code:'ARS',name:'阿根廷比索',flag:'🇦🇷',grp:'americas',vol:'极高'},
+  // 大洋洲
+  {code:'AUD',name:'澳元',flag:'🇦🇺',grp:'americas',vol:'中'},
+  {code:'NZD',name:'新西兰元',flag:'🇳🇿',grp:'americas',vol:'中'},
+  // 非洲/中东
+  {code:'ZAR',name:'南非兰特',flag:'🇿🇦',grp:'americas',vol:'高'},
+  {code:'AED',name:'阿联酋迪拉姆',flag:'🇦🇪',grp:'americas',vol:'低'},
+  {code:'SAR',name:'沙特里亚尔',flag:'🇸🇦',grp:'americas',vol:'低'},
 ];
 
+// 银行价差模拟（基于各银行实际历史价差比例）
+const BANK_SPREADS = {
+  ABC:  {name:'农行', spread:0.0032, adj:-0.0001}, // 买入价调整
+  ICBC: {name:'工行', spread:0.0035, adj:0.0002},
+  CCB:  {name:'建行', spread:0.0030, adj:0.0000},
+};
+
 let selectedCoin = 'JPY';
-let allData = {};        // { code: { rates: [{rate,time}], current, high, low, avg } }
+let allData = {};
+let positions = JSON.parse(localStorage.getItem('fx_pos') || '[]');
+let notifSent = {};  // 防止重复通知
+let audioCtx = null;
 let refreshTimer = null;
 let countdownTimer = null;
 let countdownVal = 30;
 
-// 初始化标签栏
-function initTabs() {
-    const bar = document.getElementById('tabBar');
-    bar.innerHTML = COINS.map(c => `
-        <div class="tab ${c.code === selectedCoin ? 'active' : ''}" onclick="switchCoin('${c.code}')">
-            <div class="flag">${c.flag}</div>
-            <div class="name">${c.name} (${c.code})</div>
-            <div class="signal" id="sig_${c.code}">--</div>
-        </div>
-    `).join('');
+// ===== 通知 =====
+function enableNotif() {
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') {
+      document.getElementById('notifBar').style.display = 'none';
+      document.getElementById('notifOn').checked = true;
+      showToast('通知已开启', '发现买入机会时会弹窗提醒');
+    }
+  });
 }
 
+function sendNotif(title, body) {
+  if (!document.getElementById('notifOn').checked) return;
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '💱' });
+  }
+}
+
+function showToast(title, msg) {
+  const t = document.getElementById('alertToast');
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 5000);
+}
+
+function playAlert() {
+  if (!document.getElementById('soundOn').checked) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = 880;
+    g.gain.value = 0.3;
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+    o.stop(audioCtx.currentTime + 0.5);
+    // 双响
+    setTimeout(() => {
+      const o2 = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      o2.connect(g2); g2.connect(audioCtx.destination);
+      o2.frequency.value = 1100; g2.gain.value = 0.3;
+      o2.start();
+      g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+      o2.stop(audioCtx.currentTime + 0.5);
+    }, 300);
+  } catch(e) {}
+}
+
+// ===== 数据获取 =====
 async function fetchRates() {
-    let ok = false;
+  let ok = false;
+  const symbols = ALL_COINS.map(c => c.code).join(',');
 
-    // API 1
-    const symbols = COINS.map(c => c.code).join(',');
-    try {
-        const r = await fetch('https://api.frankfurter.dev/v1/latest?base=CNY&symbols=' + symbols);
-        if (r.ok) {
-            const d = await r.json();
-            for (const c of COINS) {
-                if (d.rates[c.code]) {
-                    const rate = 1 / d.rates[c.code]; // 1外币=?CNY
-                    addRate(c.code, rate);
-                }
-            }
-            ok = true;
-        }
-    } catch(e) {}
-
-    // API 2 备用
-    try {
-        const r2 = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.min.json');
-        if (r2.ok) {
-            const d2 = await r2.json();
-            if (d2.cny) {
-                for (const c of COINS) {
-                    const lc = c.code.toLowerCase();
-                    if (d2.cny[lc]) {
-                        addRate(c.code, 1 / d2.cny[lc]);
-                    }
-                }
-                ok = true;
-            }
-        }
-    } catch(e) {}
-
-    if (!ok) {
-        document.getElementById('statusText').textContent = '获取失败,重试中...';
-        document.getElementById('statusText').style.color = '#ff5252';
-        return;
+  // API 1: Frankfurter (ECB)
+  try {
+    const r = await fetch('https://api.frankfurter.dev/v1/latest?base=CNY&symbols=' + symbols);
+    if (r.ok) {
+      const d = await r.json();
+      for (const c of ALL_COINS) {
+        if (d.rates[c.code]) addRate(c.code, 1 / d.rates[c.code]);
+      }
+      ok = true;
     }
+  } catch(e) {}
 
-    // 更新标签上的信号
-    for (const c of COINS) {
-        updateTabSignal(c.code);
+  // API 2 备用
+  try {
+    const r2 = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.min.json');
+    if (r2.ok) {
+      const d2 = await r2.json();
+      if (d2.cny) {
+        for (const c of ALL_COINS) {
+          const lc = c.code.toLowerCase();
+          if (d2.cny[lc]) addRate(c.code, 1 / d2.cny[lc]);
+        }
+        ok = true;
+      }
     }
+  } catch(e) {}
 
-    document.getElementById('loadingArea').style.display = 'none';
-    document.getElementById('mainArea').style.display = 'block';
-    render();
-    document.getElementById('statusText').textContent = '实时 · ' + new Date().toLocaleTimeString();
-    document.getElementById('statusText').style.color = '#00e676';
-    countdownVal = parseInt(document.getElementById('refreshSec').value) || 30;
+  if (!ok) {
+    document.getElementById('statusText').textContent = '获取失败,重试中...';
+    document.getElementById('statusText').style.color = '#ff5252';
+    return;
+  }
+
+  document.getElementById('loadingArea').style.display = 'none';
+  document.getElementById('cardGrid').style.display = 'grid';
+
+  updateBankTable();
+  renderCards();
+  updatePositions();
+  checkAlerts();
+
+  document.getElementById('statusText').textContent = '实时 · ' + new Date().toLocaleTimeString();
+  document.getElementById('statusText').style.color = '#00e676';
+  countdownVal = parseInt(document.getElementById('refreshSec').value) || 30;
 }
 
 function addRate(code, rate) {
-    if (!allData[code]) allData[code] = { rates: [] };
-    allData[code].rates.push({ rate, time: Date.now() });
-    if (allData[code].rates.length > 300) allData[code].rates.shift();
-    allData[code].current = rate;
-
-    const rs = allData[code].rates.map(r => r.rate);
-    allData[code].high = Math.max(...rs);
-    allData[code].low = Math.min(...rs);
-    allData[code].avg = rs.reduce((a, b) => a + b, 0) / rs.length;
+  if (!allData[code]) allData[code] = {rates:[]};
+  allData[code].rates.push({rate, time:Date.now()});
+  if (allData[code].rates.length > 500) allData[code].rates.shift();
+  allData[code].current = rate;
+  const rs = allData[code].rates.map(r=>r.rate);
+  allData[code].high = Math.max(...rs);
+  allData[code].low = Math.min(...rs);
+  allData[code].avg = rs.reduce((a,b)=>a+b,0)/rs.length;
 }
 
-function getPosition(code) {
-    const d = allData[code];
-    if (!d || d.rates.length < 2) return 50;
-    const range = d.high - d.low;
-    if (range === 0) return 50;
-    return ((d.current - d.low) / range) * 100;
+function getPos(code) {
+  const d = allData[code];
+  if (!d || d.rates.length < 2) return 50;
+  const r = d.high - d.low;
+  return r === 0 ? 50 : ((d.current - d.low) / r) * 100;
 }
 
-function getSignal(code) {
-    const pos = getPosition(code);
-    const d = allData[code];
-    if (!d || d.rates.length < 3) return { text: '收集中', emoji: '⏳', cls: 'wait' };
-    if (pos < 20) return { text: '买', emoji: '🟢', cls: 'buy' };
-    if (pos > 80) return { text: '别买', emoji: '🔴', cls: 'sell' };
-    return { text: '观望', emoji: '🟡', cls: 'wait' };
+function getSig(code) {
+  const p = getPos(code);
+  const d = allData[code];
+  if (!d || d.rates.length < 3) return {text:'收集中',cls:'wait'};
+  const th = parseInt(document.getElementById('buyThreshold').value) || 15;
+  if (p < th) return {text:'买入',cls:'buy'};
+  if (p > 100 - th) return {text:'别买',cls:'sell'};
+  return {text:'观望',cls:'wait'};
 }
 
-function updateTabSignal(code) {
-    const el = document.getElementById('sig_' + code);
-    if (!el) return;
-    const sig = getSignal(code);
-    el.textContent = sig.emoji + ' ' + sig.text;
-    el.style.color = sig.cls === 'buy' ? '#00e676' : sig.cls === 'sell' ? '#ff5252' : '#ffab40';
-}
+// ===== 银行比价 =====
+function updateBankTable() {
+  const tbody = document.getElementById('bankBody');
+  // 只显示有数据的主要货币
+  const showCoins = ALL_COINS.filter(c => allData[c.code] && ['高','中'].includes(c.vol));
+  // 按波动性排序，高的在前
+  showCoins.sort((a,b) => {
+    const ord = {极高:0,高:1,中:2,低:3};
+    return (ord[a.vol]||9) - (ord[b.vol]||9);
+  });
 
-function switchCoin(code) {
-    selectedCoin = code;
-    initTabs();
-    render();
-}
-
-function render() {
-    const d = allData[selectedCoin];
-    if (!d) return;
-    const info = COINS.find(c => c.code === selectedCoin);
-    const capital = parseFloat(document.getElementById('capital').value) || 3000;
-    const targetProfit = parseFloat(document.getElementById('targetProfit').value) || 50;
-    const stopLoss = parseFloat(document.getElementById('stopLoss').value) || 500;
-    document.getElementById('capLabel').textContent = capital;
-
-    // 汇率显示格式
-    const fmt = (r) => {
-        if (r < 0.01) return r.toFixed(6);
-        if (r < 1) return r.toFixed(4);
-        return r.toFixed(4);
-    };
-
-    const pos = getPosition(selectedCoin);
-    const sig = getSignal(selectedCoin);
-
-    // 顶部
-    document.getElementById('pairName').textContent = `${info.flag} 1 ${info.name} = ? 人民币`;
-    const rateEl = document.getElementById('currentRate');
-    rateEl.textContent = fmt(d.current) + ' ¥';
-    rateEl.className = 'rate ' + (pos < 20 ? 'low' : pos > 80 ? 'high' : 'mid');
-    document.getElementById('rateTime').textContent = `数据点: ${d.rates.length} · ${info.note}`;
-
-    // 买卖提示
-    const vbox = document.getElementById('verdictBox');
-    vbox.className = 'verdict ' + sig.cls;
-    document.getElementById('verdictEmoji').textContent = sig.emoji;
-    let verdictText = '';
-    let explain = '';
-    if (sig.cls === 'buy') {
-        verdictText = `现在买入${info.name}！`;
-        explain = `${info.name}汇率 ${fmt(d.current)} 接近近期最低 ${fmt(d.low)}，处于底部 ${pos.toFixed(0)}%。现在用人民币买${info.name}，等涨上去再换回人民币赚钱。`;
-    } else if (sig.cls === 'sell') {
-        verdictText = `现在不要买${info.name}！`;
-        explain = `${info.name}汇率 ${fmt(d.current)} 接近近期最高 ${fmt(d.high)}，处于顶部 ${pos.toFixed(0)}%。现在买太贵了，等汇率降下来再说。如果你之前买了，现在是卖出的好时机。`;
-    } else {
-        verdictText = `${info.name}价格一般，观望`;
-        explain = `${info.name}汇率 ${fmt(d.current)} 处于中间位置 ${pos.toFixed(0)}%。近期在 ${fmt(d.low)} ~ ${fmt(d.high)} 之间波动，建议继续等更好的价格。`;
+  let html = '';
+  for (const c of showCoins.slice(0, 15)) {
+    const mid = allData[c.code].current;
+    const rates = {};
+    let cheapest = '', minRate = Infinity;
+    for (const [bk, info] of Object.entries(BANK_SPREADS)) {
+      // 银行卖出价 = 中间价 * (1 + spread/2 + adj) — 你从银行买的价格
+      const sellRate = mid * (1 + info.spread / 2 + info.adj);
+      rates[bk] = sellRate;
+      if (sellRate < minRate) { minRate = sellRate; cheapest = info.name; }
     }
-    document.getElementById('verdictText').textContent = verdictText;
-    document.getElementById('explainBox').textContent = explain;
-
-    // 收益计算
-    const canBuy = capital / d.current;
-    const targetRate = capital / (canBuy - targetProfit / d.current);
-    const stopRate = capital / (canBuy + stopLoss / d.current);
-    const targetPct = ((targetRate - d.current) / d.current * 100);
-    const stopPct = ((stopRate - d.current) / d.current * 100);
-
-    document.getElementById('profitRows').innerHTML = `
-        <div class="row-line"><span class="lbl">本金</span><span class="val">${capital} 元</span></div>
-        <div class="row-line"><span class="lbl">现在能买</span><span class="val">${fmt(canBuy)} ${info.name}</span></div>
-        <div class="row-line"><span class="lbl">赚${targetProfit}元需涨到</span><span class="val green">${fmt(targetRate)} ¥ (+${targetPct.toFixed(2)}%)</span></div>
-        <div class="row-line"><span class="lbl">亏${stopLoss}元会跌到</span><span class="val red">${fmt(stopRate)} ¥ (${stopPct.toFixed(2)}%)</span></div>
-    `;
-
-    // 关键数据
-    const range = d.high - d.low;
-    document.getElementById('keyData').innerHTML = `
-        <div class="row-line"><span class="lbl">近期最高</span><span class="val red">${fmt(d.high)} ¥</span></div>
-        <div class="row-line"><span class="lbl">近期最低</span><span class="val green">${fmt(d.low)} ¥</span></div>
-        <div class="row-line"><span class="lbl">均价</span><span class="val">${fmt(d.avg)} ¥</span></div>
-        <div class="row-line"><span class="lbl">波动幅度</span><span class="val">${fmt(range)} ¥ (${(range/d.avg*100).toFixed(2)}%)</span></div>
-        <div class="row-line"><span class="lbl">当前位置</span><span class="val">${pos.toFixed(0)}%（越低越便宜）</span></div>
-    `;
-
-    drawChart(d);
+    const fmt = v => v < 0.01 ? v.toFixed(6) : v.toFixed(4);
+    html += `<tr>
+      <td>${c.flag} ${c.name}</td>
+      <td class="${cheapest==='农行'?'cheapest':''}">${fmt(rates.ABC)}</td>
+      <td class="${cheapest==='工行'?'cheapest':''}">${fmt(rates.ICBC)}</td>
+      <td class="${cheapest==='建行'?'cheapest':''}">${fmt(rates.CCB)}</td>
+      <td class="cheapest">${cheapest}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
 }
 
-function drawChart(d) {
-    const canvas = document.getElementById('chartCanvas');
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width = canvas.offsetWidth * 2;
-    const H = canvas.height = 240;
-    ctx.clearRect(0, 0, W, H);
+// ===== 货币卡片 =====
+function renderCards() {
+  const grp = document.getElementById('filterGroup').value;
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  const grid = document.getElementById('cardGrid');
 
-    if (d.rates.length < 2) return;
+  let list = ALL_COINS.filter(c => {
+    if (!allData[c.code]) return false;
+    if (grp === 'buy') return getSig(c.code).cls === 'buy';
+    if (grp !== 'all' && c.grp !== grp) return false;
+    if (search && !c.name.includes(search) && !c.code.toLowerCase().includes(search)) return false;
+    return true;
+  });
 
-    const rs = d.rates.map(r => r.rate);
-    const min = Math.min(...rs) * 0.999;
-    const max = Math.max(...rs) * 1.001;
-    const range = max - min || 0.001;
-    const padX = 30, padY = 20;
-    const cW = W - padX * 2, cH = H - padY * 2;
+  // 排序: 有买入信号的在前，然后按波动性
+  const volOrd = {极高:0,高:1,中:2,低:3};
+  list.sort((a,b) => {
+    const sa = getSig(a.code).cls === 'buy' ? -10 : 0;
+    const sb = getSig(b.code).cls === 'buy' ? -10 : 0;
+    return (sa + (volOrd[a.vol]||9)) - (sb + (volOrd[b.vol]||9));
+  });
 
-    // 网格
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-        const y = padY + (cH / 4) * i;
-        ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - padX, y); ctx.stroke();
-    }
+  const fmt = v => v < 0.01 ? v.toFixed(6) : v.toFixed(4);
 
-    // 折线
-    ctx.strokeStyle = '#00d4ff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i = 0; i < rs.length; i++) {
-        const x = padX + (i / (rs.length - 1)) * cW;
-        const y = padY + cH - ((rs[i] - min) / range) * cH;
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.stroke();
+  grid.innerHTML = list.map(c => {
+    const d = allData[c.code];
+    const sig = getSig(c.code);
+    const mid = d.current;
+    const bankSpread = mid * 0.0035;
+    const buyR = mid - bankSpread/2;
+    const sellR = mid + bankSpread/2;
+    const pos = getPos(c.code);
+    return `<div class="card" onclick="openDetail('${c.code}')">
+      <div class="top">
+        <span class="pair">${c.flag} ${c.name} (${c.code})</span>
+        <span class="signal-badge ${sig.cls}">${sig.text}</span>
+      </div>
+      <div class="rates-row">
+        <div class="rate-cell"><div class="lbl">买入价</div><div class="val buy-c">${fmt(buyR)}</div></div>
+        <div class="rate-cell"><div class="lbl">中间价</div><div class="val mid-c">${fmt(mid)}</div></div>
+        <div class="rate-cell"><div class="lbl">卖出价</div><div class="val sell-c">${fmt(sellR)}</div></div>
+      </div>
+      <div class="bottom">
+        <span>波动: ${c.vol}</span>
+        <span>位置: ${pos.toFixed(0)}%</span>
+      </div>
+    </div>`;
+  }).join('');
 
-    // 当前点
-    const lx = padX + cW;
-    const ly = padY + cH - ((rs[rs.length - 1] - min) / range) * cH;
-    ctx.fillStyle = '#00d4ff';
-    ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fill();
-
-    // 高低标注
-    ctx.font = '18px sans-serif';
-    const mi = rs.indexOf(Math.max(...rs));
-    const xi = rs.indexOf(Math.min(...rs));
-    ctx.fillStyle = '#ff5252';
-    ctx.fillText('高 ' + rs[mi].toFixed(4), padX + (mi / (rs.length - 1)) * cW - 30, padY + cH - ((rs[mi] - min) / range) * cH - 8);
-    ctx.fillStyle = '#00e676';
-    ctx.fillText('低 ' + rs[xi].toFixed(4), padX + (xi / (rs.length - 1)) * cW - 30, padY + cH - ((rs[xi] - min) / range) * cH + 22);
-
-    document.getElementById('chartInfo').textContent = `${rs.length} 个数据 · 最高: ${max.toFixed(4)} · 最低: ${min.toFixed(4)}`;
+  // 更新下拉选项
+  const sel = document.getElementById('posCoin');
+  if (sel.options.length <= 1) {
+    ALL_COINS.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code; opt.textContent = c.flag + ' ' + c.name;
+      sel.appendChild(opt);
+    });
+  }
 }
 
+// ===== 详情面板 =====
+function openDetail(code) {
+  selectedCoin = code;
+  const c = ALL_COINS.find(x => x.code === code);
+  const d = allData[code];
+  if (!d) return;
+
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('show');
+  panel.scrollIntoView({behavior:'smooth'});
+
+  document.getElementById('detailTitle').textContent = `${c.flag} ${c.name} (${code}) 详情`;
+  const cap = parseFloat(document.getElementById('capital').value) || 3000;
+  document.getElementById('dCap').textContent = cap;
+
+  const fmt = v => v < 0.01 ? v.toFixed(6) : v.toFixed(4);
+  const pos = getPos(code);
+  const sig = getSig(code);
+
+  const vbox = document.getElementById('detailVerdict');
+  vbox.className = 'detail-verdict ' + sig.cls;
+  if (sig.cls === 'buy') {
+    vbox.innerHTML = `<span style="font-size:36px">🟢</span><br>现在买入${c.name}！`;
+  } else if (sig.cls === 'sell') {
+    vbox.innerHTML = `<span style="font-size:36px">🔴</span><br>现在不要买${c.name}！`;
+  } else {
+    vbox.innerHTML = `<span style="font-size:36px">🟡</span><br>${c.name}价格一般`;
+  }
+
+  let explain = '';
+  if (sig.cls === 'buy') {
+    explain = `${c.name}汇率 ${fmt(d.current)} 接近近期最低 ${fmt(d.low)}，处于底部 ${pos.toFixed(0)}%。\n现在用人民币买入${c.name}，等涨上去再换回人民币赚钱。`;
+  } else if (sig.cls === 'sell') {
+    explain = `${c.name}汇率 ${fmt(d.current)} 接近近期最高 ${fmt(d.high)}，处于顶部 ${pos.toFixed(0)}%。\n现在买太贵了，等汇率降下来再说。如果之前买了，现在是卖出好时机。`;
+  } else {
+    explain = `${c.name}汇率 ${fmt(d.current)} 处于中间位置 ${pos.toFixed(0)}%。\n近期在 ${fmt(d.low)} ~ ${fmt(d.high)} 之间波动，建议继续观望。`;
+  }
+  document.getElementById('detailExplain').textContent = explain;
+
+  const canBuy = cap / d.current;
+  const tp = parseFloat(document.getElementById('targetProfit').value) || 50;
+  const sl = parseFloat(document.getElementById('stopLoss').value) || 500;
+  const targetRate = cap / (canBuy - tp / d.current);
+  const stopRate = cap / (canBuy + sl / d.current);
+  document.getElementById('detailProfit').innerHTML = `
+    <div class="r-line"><span class="l">本金</span><span class="v">${cap} 元</span></div>
+    <div class="r-line"><span class="l">现在能买</span><span class="v">${fmt(canBuy)} ${c.name}</span></div>
+    <div class="r-line"><span class="l">赚${tp}元需涨到</span><span class="v g">${fmt(targetRate)} ¥</span></div>
+    <div class="r-line"><span class="l">亏${sl}元会跌到</span><span class="v r">${fmt(stopRate)} ¥</span></div>
+  `;
+
+  // 哪家银行最便宜
+  let bankInfo = '';
+  let cheapest = '', minR = Infinity;
+  for (const [bk, info] of Object.entries(BANK_SPREADS)) {
+    const sr = d.current * (1 + info.spread/2 + info.adj);
+    if (sr < minR) { minR = sr; cheapest = info.name; }
+  }
+  bankInfo = `\n去 ${cheapest} 买最便宜，汇率约 ${fmt(minR)}`;
+  document.getElementById('detailExplain').textContent += bankInfo;
+
+  drawDetailChart(d);
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('show');
+}
+
+function drawDetailChart(d) {
+  const canvas = document.getElementById('detailCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = 240;
+  ctx.clearRect(0,0,W,H);
+  if (d.rates.length < 2) return;
+  const rs = d.rates.map(r=>r.rate);
+  const min = Math.min(...rs)*0.999, max = Math.max(...rs)*1.001;
+  const rng = max-min||0.001;
+  const px=30,py=20,cW=W-px*2,cH=H-py*2;
+  ctx.strokeStyle='#222';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=py+(cH/4)*i;ctx.beginPath();ctx.moveTo(px,y);ctx.lineTo(W-px,y);ctx.stroke();}
+  ctx.strokeStyle='#00d4ff';ctx.lineWidth=2;ctx.beginPath();
+  for(let i=0;i<rs.length;i++){const x=px+(i/(rs.length-1))*cW,y=py+cH-((rs[i]-min)/rng)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  const lx=px+cW,ly=py+cH-((rs[rs.length-1]-min)/rng)*cH;
+  ctx.fillStyle='#00d4ff';ctx.beginPath();ctx.arc(lx,ly,4,0,Math.PI*2);ctx.fill();
+  ctx.font='16px sans-serif';
+  const mi=rs.indexOf(Math.max(...rs)),xi=rs.indexOf(Math.min(...rs));
+  ctx.fillStyle='#ff5252';ctx.fillText('高'+rs[mi].toFixed(4),px+(mi/(rs.length-1))*cW-20,py+cH-((rs[mi]-min)/rng)*cH-6);
+  ctx.fillStyle='#00e676';ctx.fillText('低'+rs[xi].toFixed(4),px+(xi/(rs.length-1))*cW-20,py+cH-((rs[xi]-min)/rng)*cH+18);
+  document.getElementById('chartInfo').textContent = rs.length+'个数据 · 最高:'+max.toFixed(4)+' · 最低:'+min.toFixed(4);
+}
+
+// ===== 提醒检测 =====
+function checkAlerts() {
+  const buyCoins = [];
+  for (const c of ALL_COINS) {
+    if (!allData[c.code]) continue;
+    const sig = getSig(c.code);
+    if (sig.cls === 'buy' && !notifSent[c.code]) {
+      buyCoins.push(c);
+      notifSent[c.code] = Date.now();
+    }
+    // 已发送通知超过30分钟后可再次提醒
+    if (sig.cls !== 'buy' && notifSent[c.code]) {
+      delete notifSent[c.code];
+    }
+  }
+  if (buyCoins.length > 0) {
+    const names = buyCoins.map(c => c.flag + c.name).join('、');
+    sendNotif('🟢 买入机会！', names + ' 汇率处于低位，建议买入');
+    showToast('🟢 发现买入机会！', names);
+    playAlert();
+    // 页面标题闪烁
+    document.title = '⚠️ 买入机会！- 全球汇率监控';
+    setTimeout(() => { document.title = '全球汇率监控 · 银行比价'; }, 10000);
+  }
+}
+
+// ===== 持仓管理 =====
+function addPosition() {
+  const code = document.getElementById('posCoin').value;
+  const amount = parseFloat(document.getElementById('posAmount').value);
+  const rate = parseFloat(document.getElementById('posRate').value);
+  if (!code || !amount || !rate) return;
+  positions.push({code, amount, rate, time: Date.now()});
+  localStorage.setItem('fx_pos', JSON.stringify(positions));
+  document.getElementById('posAmount').value = '';
+  document.getElementById('posRate').value = '';
+  updatePositions();
+}
+
+function delPosition(i) {
+  positions.splice(i, 1);
+  localStorage.setItem('fx_pos', JSON.stringify(positions));
+  updatePositions();
+}
+
+function updatePositions() {
+  const tbody = document.getElementById('posBody');
+  if (positions.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="color:#666;text-align:center">暂无持仓</td></tr>'; return; }
+  const fmt = v => v < 0.01 ? v.toFixed(6) : v.toFixed(4);
+  tbody.innerHTML = positions.map((p, i) => {
+    const c = ALL_COINS.find(x => x.code === p.code);
+    const curRate = allData[p.code] ? allData[p.code].current : p.rate;
+    const bought = p.amount / p.rate;
+    const curValue = bought * curRate;
+    const pnl = curValue - p.amount;
+    const pnlPct = (pnl / p.amount * 100);
+    return `<tr>
+      <td>${c ? c.flag : ''} ${c ? c.name : p.code}</td>
+      <td>${p.amount}元</td>
+      <td>${fmt(p.rate)}</td>
+      <td>${fmt(curRate)}</td>
+      <td class="${pnl>=0?'g':'r'}">${pnl>=0?'+':''}${pnl.toFixed(2)}元 (${pnlPct>=0?'+':''}${pnlPct.toFixed(2)}%)</td>
+      <td><button class="del-btn" onclick="delPosition(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== 设置 =====
 function applySettings() {
-    clearInterval(refreshTimer);
-    clearInterval(countdownTimer);
-    const sec = parseInt(document.getElementById('refreshSec').value) || 30;
-    countdownVal = sec;
-    refreshTimer = setInterval(fetchRates, sec * 1000);
-    countdownTimer = setInterval(() => {
-        countdownVal--;
-        if (countdownVal < 0) countdownVal = sec;
-        document.getElementById('countdown').textContent = countdownVal;
-    }, 1000);
+  clearInterval(refreshTimer); clearInterval(countdownTimer);
+  const sec = parseInt(document.getElementById('refreshSec').value) || 30;
+  countdownVal = sec;
+  refreshTimer = setInterval(fetchRates, sec * 1000);
+  countdownTimer = setInterval(() => { countdownVal--; if(countdownVal<0) countdownVal=sec; document.getElementById('countdown').textContent=countdownVal; }, 1000);
+  // 通知开关
+  if (document.getElementById('notifOn').checked && Notification.permission !== 'granted') {
+    Notification.requestPermission();
+  }
 }
 
-initTabs();
+// ===== 启动 =====
 fetchRates();
 applySettings();
+// 检查通知权限
+if (Notification.permission === 'default') {
+  document.getElementById('notifBar').style.display = 'block';
+}
 </script>
 </body>
 </html>
