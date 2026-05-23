@@ -222,7 +222,8 @@ function getPos(code){
 // 核心判断逻辑
 function getAction(code){
   const d=allData[code];
-  if(!d||d.rates.length<3)return {act:'wait',text:'收集中',cls:'wait'};
+  if(!d||d.rates.length<50)return {act:'wait',text:'收集中('+d.rates.length+'/50)',cls:'wait',
+    detail:'数据不足，需收集约25分钟数据才能判断，当前 '+d.rates.length+'/50'};
 
   const mid=d.current;
   const pos=getPos(code);
