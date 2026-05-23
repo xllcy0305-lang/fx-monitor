@@ -453,14 +453,20 @@ function renderCards() {
     const mid = d.current;
     const pos = getPos(c.code);
 
-    // 计算三家银行卖出价（你从银行买外汇要付的钱）
-    const abcRate = mid * (1 + BANK_SPREADS.ABC.spread/2 + BANK_SPREADS.ABC.adj);
-    const icbcRate = mid * (1 + BANK_SPREADS.ICBC.spread/2 + BANK_SPREADS.ICBC.adj);
-    const ccbRate = mid * (1 + BANK_SPREADS.CCB.spread/2 + BANK_SPREADS.CCB.adj);
-    let bankCheapest = 'CCB';
-    let minBankRate = ccbRate;
-    if (abcRate < minBankRate) { bankCheapest = 'ABC'; minBankRate = abcRate; }
-    if (icbcRate < minBankRate) { bankCheapest = 'ICBC'; minBankRate = icbcRate; }
+    // 三家银行卖出价（你从银行买外汇要付的钱）
+    const abcBuy = mid * (1 + BANK_SPREADS.ABC.spread/2 + BANK_SPREADS.ABC.adj);
+    const icbcBuy = mid * (1 + BANK_SPREADS.ICBC.spread/2 + BANK_SPREADS.ICBC.adj);
+    const ccbBuy = mid * (1 + BANK_SPREADS.CCB.spread/2 + BANK_SPREADS.CCB.adj);
+    let cheapestBank = '建行', cheapestRate = ccbBuy;
+    if (abcBuy < cheapestRate) { cheapestBank = '农行'; cheapestRate = abcBuy; }
+    if (icbcBuy < cheapestRate) { cheapestBank = '工行'; cheapestRate = icbcBuy; }
+
+    // 价差 = 银行价 - 国际中间价（你多付的钱）
+    const spreadDiff = cheapestRate - mid;
+    const spreadPct = (spreadDiff / mid * 100);
+
+    // 卖出价 = 银行买入价（你卖给银行能拿回的价格）
+    const bankSellBack = mid * (1 - 0.0032/2);
 
     return `<div class="card" onclick="openDetail('${c.code}')">
       <div class="top">
@@ -468,13 +474,13 @@ function renderCards() {
         <span class="signal-badge ${sig.cls}">${sig.text}</span>
       </div>
       <div class="rates-row">
-        <div class="rate-cell"><div class="lbl">农行实付</div><div class="val ${bankCheapest==='ABC'?'g':'buy-c'}">${fmt(abcRate)}</div></div>
-        <div class="rate-cell"><div class="lbl">工行实付</div><div class="val ${bankCheapest==='ICBC'?'g':'buy-c'}">${fmt(icbcRate)}</div></div>
-        <div class="rate-cell"><div class="lbl">建行实付</div><div class="val ${bankCheapest==='CCB'?'g':'buy-c'}">${fmt(ccbRate)}</div></div>
+        <div class="rate-cell"><div class="lbl">${cheapestBank}买入价</div><div class="val buy-c">${fmt(cheapestRate)}</div></div>
+        <div class="rate-cell"><div class="lbl">价差</div><div class="val mid-c">+${fmt(spreadDiff)} (${spreadPct.toFixed(2)}%)</div></div>
+        <div class="rate-cell"><div class="lbl">卖出价</div><div class="val sell-c">${fmt(bankSellBack)}</div></div>
       </div>
       <div class="bottom">
         <span>波动: ${c.vol}</span>
-        <span>最低实付: ${bankCheapest==='ABC'?'农行':bankCheapest==='ICBC'?'工行':'建行'} ${fmt(minBankRate)}</span>
+        <span>位置: ${pos.toFixed(0)}%</span>
       </div>
     </div>`;
   }).join('');
